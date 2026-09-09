@@ -8,5 +8,6 @@
     ]
   },
   "labels": ["dependencies", "docker"],
-  "automerge": false
+  "automerge": false,
+  "dependencyDashboard": false
 }
