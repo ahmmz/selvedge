@@ -1,0 +1,36 @@
+# ==============================================================================
+# ${ARGX_LOCASED} Add-On
+# Documentation: TODO
+# ==============================================================================
+# Enable with:  make enable ${ARGX_LOCASED}
+# Disable with: make disable ${ARGX_LOCASED}
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  ${ARGX_LOCASED}:
+    <<: *defaults
+    container_name: ${ARGX_LOCASED}
+    # Replace this example image and pin a release for reproducible deployments.
+    image: vendor/${ARGX_LOCASED}:latest
+    environment:
+      <<: *common
+    volumes:
+      - ./data/${ARGX_LOCASED}:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${ARGX_LOCASED}.rule=Host(`${ARGX_LOCASED}.selvedge.local`)"
+      - "traefik.http.routers.${ARGX_LOCASED}.entrypoints=websecure"
+      # Replace 3000 with the container's HTTP port.
+      - "traefik.http.services.${ARGX_LOCASED}.loadbalancer.server.port=3000"

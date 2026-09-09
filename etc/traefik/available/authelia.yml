@@ -1,0 +1,18 @@
+# ==============================================================================
+# Traefik Authelia ForwardAuth Middleware Configuration
+# ==============================================================================
+# Usage on any backend router labels:
+# "traefik.http.routers.myrouter.middlewares=authelia@file"
+# ==============================================================================
+
+http:
+  middlewares:
+    authelia:
+      forwardAuth:
+        address: "http://authelia:9091/api/auth/zscaler"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Remote-User"
+          - "Remote-Groups"
+          - "Remote-Name"
+          - "Remote-Email"

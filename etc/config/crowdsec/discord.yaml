@@ -1,0 +1,84 @@
+# ==============================================================================
+# CrowdSec Discord Notification Webhook Configuration
+# ==============================================================================
+# HOW TO ENABLE DISCORD ALERTS:
+# 1. Set CROWDSEC_DISCORD_WEBHOOK in your .env file:
+#    CROWDSEC_DISCORD_WEBHOOK="https://discord.com/api/webhooks/12345/abcdef..."
+#
+# 2. OPTIONAL STATIC MAP IMAGE:
+#    Get a free Static Maps API key from https://www.geoapify.com/ and set in .env:
+#    CROWDSEC_GEOAPIFY_KEY="<your-geoapify-key>"
+#
+# 3. Add '- discord_default' under notifications in data/crowdsec/config/profiles.yaml
+#
+# 4. Restart stack: make restart
+# ==============================================================================
+
+type: http
+name: discord_default
+log_level: info
+url: ${DISCORD_WEBHOOK_URL}
+method: POST
+headers:
+  Content-Type: application/json
+format: |
+  {
+    "embeds": [
+      {
+        "title": "🚩 CrowdSec Alert",
+        "description": "{{range $i, $alert := $}}{{range .Decisions}}{{if $alert.Source.Cn}}:flag_{{ $alert.Source.Cn | lower }}: {{else}}:pirate_flag: {{end}}`{{$alert.Source.IP}}` was **banned** for **{{.Duration}}** after triggering `{{.Scenario}}` ({{$alert.EventsCount}} hits) on machine **{{if env "CROWDSEC_HOSTNAME"}}{{env "CROWDSEC_HOSTNAME"}}{{else if $alert.MachineID}}{{$alert.MachineID}}{{else}}Selvedge{{end}}**.{{end}}{{end}}",
+        "color": 16711680,
+        "fields": [
+          {{range $i, $alert := $}}
+          {
+            "name": "Attacker IP",
+            "value": "`{{$alert.GetValue}}` ([CTI](https://app.crowdsec.net/cti/{{$alert.Source.IP}}) • [WHOIS](https://www.whois.com/whois/{{$alert.Source.IP}}) • [Shodan](https://www.shodan.io/host/{{$alert.Source.IP}}))",
+            "inline": true
+          },
+          {
+            "name": "Attack Scenario",
+            "value": "`{{$alert.Scenario}}`",
+            "inline": true
+          },
+          {
+            "name": "Country",
+            "value": "{{if $alert.Source.Cn}}:flag_{{ $alert.Source.Cn | lower }}: ({{$alert.Source.Cn | upper}}){{else}}:pirate_flag: Unknown / VPN{{end}}",
+            "inline": true
+          },
+          {
+            "name": "Network (ASN)",
+            "value": "{{if $alert.Source.AsNumber}}`AS{{$alert.Source.AsNumber}}` ({{$alert.Source.AsName}}){{else}}`N/A`{{end}}",
+            "inline": true
+          },
+          {
+            "name": "Attack Events",
+            "value": "`{{$alert.EventsCount}} logged hits`",
+            "inline": true
+          }
+          {{if (index $alert.Events 0).GetMeta "service"}}
+          ,
+          {
+            "name": "Target Service",
+            "value": "`{{(index $alert.Events 0).GetMeta "service"}}`",
+            "inline": true
+          }
+          {{end}}
+          {{if (index $alert.Events 0).GetMeta "http_path"}}
+          ,
+          {
+            "name": "Target Path",
+            "value": "`{{(index $alert.Events 0).GetMeta "http_path"}}`",
+            "inline": true
+          }
+          {{end}}
+          {{if ne (add $i 1) (len $)}},{{end}}
+          {{end}}
+        ]
+        {{if and (index $ 0).Source.Latitude (ne (env "CROWDSEC_GEOAPIFY_KEY") "")}}
+        ,"image": {
+          "url": "https://maps.geoapify.com/v1/staticmap?style=osm-bright-grey&width=600&height=300&center=lonlat:{{(index $ 0).Source.Longitude}},{{(index $ 0).Source.Latitude}}&zoom=5&marker=lonlat:{{(index $ 0).Source.Longitude}},{{(index $ 0).Source.Latitude}};color:%23ff0000;size:medium&apiKey={{env "CROWDSEC_GEOAPIFY_KEY"}}"
+        }
+        {{end}}
+      }
+    ]
+  }

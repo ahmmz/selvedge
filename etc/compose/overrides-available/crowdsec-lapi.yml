@@ -1,0 +1,15 @@
+# ==============================================================================
+# CrowdSec LAPI Exposure over HTTPS (For Cloudflare Workers / Remote Bouncers)
+# Selvedge-Depends-On: crowdsec
+# Enable with:  make enable crowdsec-lapi
+# Disable with: make disable crowdsec-lapi
+# ==============================================================================
+
+services:
+  crowdsec:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crowdsec-lapi.rule=Host(`${CROWDSEC_LAPI_HOST:-selapi.selvedge.local}`)"
+      - "traefik.http.routers.crowdsec-lapi.entrypoints=websecure"
+      - "traefik.http.services.crowdsec-lapi.loadbalancer.server.port=8080"
+      - "traefik.http.routers.crowdsec-lapi.middlewares=whitelist-cloudflare@file"

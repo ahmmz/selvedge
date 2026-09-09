@@ -1,0 +1,11 @@
+# ==============================================================================
+# CrowdSec AppSec WAF & OWASP Virtual Patching Rules
+# Selvedge-Depends-On: crowdsec
+# Enable with:  make enable crowdsec-appsec
+# Disable with: make disable crowdsec-appsec
+# ==============================================================================
+
+services:
+  crowdsec:
+    environment:
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/appsec-generic-rules crowdsecurity/appsec-crs crowdsecurity/appsec-virtual-patching"

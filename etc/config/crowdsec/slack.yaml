@@ -1,0 +1,77 @@
+# ==============================================================================
+# CrowdSec Slack Notification Webhook Configuration
+# ==============================================================================
+# HOW TO ENABLE SLACK ALERTS:
+# 1. Set CROWDSEC_SLACK_WEBHOOK in your .env file:
+#    CROWDSEC_SLACK_WEBHOOK="https://hooks.slack.com/services/T000/B000/XXXX"
+#
+# 2. Add '- slack_default' under notifications in data/crowdsec/config/profiles.yaml
+#
+# 3. Restart stack: make restart
+# ==============================================================================
+
+type: http
+name: slack_default
+log_level: info
+url: ${CROWDSEC_SLACK_WEBHOOK}
+method: POST
+headers:
+  Content-Type: application/json
+format: |
+  {
+    "text": "🚩 *CrowdSec Alert*",
+    "attachments": [
+      {
+        "color": "#FF0000",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "{{range $i, $alert := $}}{{range .Decisions}}*{{$alert.Source.IP}}* was *banned* for *{{.Duration}}* after triggering `{{.Scenario}}` ({{$alert.EventsCount}} hits) on *{{if env "CROWDSEC_HOSTNAME"}}{{env "CROWDSEC_HOSTNAME"}}{{else if $alert.MachineID}}{{$alert.MachineID}}{{else}}Selvedge{{end}}*.{{end}}{{end}}"
+            }
+          },
+          {
+            "type": "section",
+            "fields": [
+              {{range $i, $alert := $}}
+              {
+                "type": "mrkdwn",
+                "text": "*Attacker IP:*\n`{{$alert.GetValue}}` (<https://app.crowdsec.net/cti/{{$alert.Source.IP}}|CTI> | <https://www.whois.com/whois/{{$alert.Source.IP}}|WHOIS> | <https://www.shodan.io/host/{{$alert.Source.IP}}|Shodan>)"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Scenario:*\n`{{$alert.Scenario}}`"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Country:*\n{{if $alert.Source.Cn}}:flag-{{ $alert.Source.Cn | lower }}: ({{$alert.Source.Cn | upper}}){{else}}🏴‍☠️ Unknown / VPN{{end}}"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Network (ASN):*\n{{if $alert.Source.AsNumber}}`AS{{$alert.Source.AsNumber}}` ({{$alert.Source.AsName}}){{else}}`N/A`{{end}}"
+              },
+              {
+                "type": "mrkdwn",
+                "text": "*Attack Events:*\n`{{$alert.EventsCount}} logged hits`"
+              }
+              {{if (index $alert.Events 0).GetMeta "service"}}
+              ,{
+                "type": "mrkdwn",
+                "text": "*Target Service:*\n`{{(index $alert.Events 0).GetMeta "service"}}`"
+              }
+              {{end}}
+              {{if (index $alert.Events 0).GetMeta "http_path"}}
+              ,{
+                "type": "mrkdwn",
+                "text": "*Target Path:*\n`{{(index $alert.Events 0).GetMeta "http_path"}}`"
+              }
+              {{end}}
+              {{if ne (add $i 1) (len $)}},{{end}}
+              {{end}}
+            ]
+          }
+        ]
+      }
+    ]
+  }

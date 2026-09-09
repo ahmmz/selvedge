@@ -1,0 +1,48 @@
+### Linux / Unix Server ###
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+### direnv & Environment ###
+.direnv
+.envrc
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+### Selvedge Active Modules & Overrides ###
+etc/compose/services-enabled/*
+etc/compose/overrides-enabled/*
+etc/traefik/enabled/*
+docker-compose.override.yml
+
+### Custom User CrowdSec Rules ###
+etc/config/crowdsec/scenarios/*
+!etc/config/crowdsec/scenarios/.gitkeep
+etc/config/crowdsec/whitelists/*
+!etc/config/crowdsec/whitelists/.gitkeep
+etc/config/crowdsec/acquis.d/*
+!etc/config/crowdsec/acquis.d/.gitkeep
+
+### Certificates & Keys ###
+etc/mkcert/*
+etc/certificates/*
+etc/letsencrypt/*
+
+### Docker Bind Mounts & Backups ###
+**/data/
+**/backup/*.tar.gz
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Keep the negations last, so an ignored directory still keeps its placeholder.
+!**/.keep
+!**/.gitkeep

@@ -1,0 +1,97 @@
+# ==============================================================================
+# Monitoring Stack Add-On (Prometheus, Grafana, Loki, Promtail)
+# Documentation: https://prometheus.io/ | https://grafana.com/ |
+#                https://grafana.com/docs/loki/latest/
+# ==============================================================================
+# Enable with:  make enable monitoring
+# Disable with: make disable monitoring
+# ==============================================================================
+# Prometheus + Grafana provide metrics. Loki + Promtail add searchable access
+# logs, wired into the same Grafana via a provisioned datasource. Loki needs
+# TRAEFIK_ACCESSLOG_FORMAT=json to attribute requests to a route.
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  prometheus:
+    <<: *defaults
+    container_name: prometheus
+    image: prom/prometheus:v3.14.0
+    volumes:
+      - ./etc/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./etc/config/prometheus/scrape.d:/etc/prometheus/scrape.d:ro
+      - ./data/prometheus:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    environment:
+      <<: *common
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`${PROMETHEUS_HOST:-prometheus.selvedge.local}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  grafana:
+    <<: *defaults
+    container_name: grafana
+    image: grafana/grafana:13.2.1
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./etc/config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./etc/config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      <<: *common
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_HOST:-grafana.selvedge.local}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  loki:
+    <<: *defaults
+    container_name: loki
+    image: grafana/loki:3.7.7
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./etc/config/loki/config.yml:/etc/loki/config.yml:ro
+      - ./data/loki:/loki
+    environment:
+      <<: *common
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`${LOKI_HOST:-logs-store.selvedge.local}`)"
+      - "traefik.http.routers.loki.entrypoints=websecure"
+      - "traefik.http.routers.loki.middlewares=rfc1918@file"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+
+  promtail:
+    <<: *defaults
+    container_name: promtail
+    image: grafana/promtail:3.6.11
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./etc/config/promtail/config.yml:/etc/promtail/config.yml:ro
+      - ./data/log/traefik:/var/log/traefik:ro
+      - ./data/log/nginx:/var/log/nginx:ro
+      - ./data/promtail:/tmp/promtail
+    environment:
+      <<: *common
+    labels:
+      - "traefik.enable=false"

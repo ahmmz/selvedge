@@ -1,0 +1,23 @@
+# ==============================================================================
+# Grafana Datasource Provisioning
+# Prometheus (metrics) and Loki (logs) both ship with the monitoring add-on.
+# ==============================================================================
+
+apiVersion: 1
+
+datasources:
+  # The uid values are fixed so provisioned dashboards can reference them.
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000

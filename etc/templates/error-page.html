@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  Custom error page template for the error-pages add-on.
+
+  Enable it by setting ERROR_PAGES_HTML_TEMPLATE in .env:
+    ERROR_PAGES_HTML_TEMPLATE=/opt/html-template.html
+  Leave that value empty to use the built-in theme in ERROR_PAGES_TEMPLATE.
+
+  Syntax is Go text/template. Fields include .StatusCode, .Message,
+  .Description, .Host, and .OriginalURI. Full list:
+  https://github.com/tarampampam/error-pages/blob/master/docs/templating.md
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .StatusCode }}: {{ .Message }}</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --border: rgba(255, 255, 255, 0.3);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff;
+        --text: #000000;
+        --border: rgba(0, 0, 0, 0.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .error-container {
+      display: flex;
+      align-items: center;
+      line-height: 48px;
+    }
+    .error-code {
+      display: inline-block;
+      margin: 0 20px 0 0;
+      padding-right: 23px;
+      font-size: 24px;
+      font-weight: 500;
+      vertical-align: top;
+      border-right: 1px solid var(--border);
+    }
+    .error-message {
+      display: inline-block;
+    }
+    .error-message h2 {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 28px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <h1 class="error-code">{{ .StatusCode }}</h1>
+    <div class="error-message">
+      <h2>{{ .Message }}</h2>
+    </div>
+  </div>
+</body>
+</html>

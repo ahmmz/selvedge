@@ -1,0 +1,14 @@
+# ==============================================================================
+# Grafana VictoriaMetrics Datasource
+# Mounted by the crowdsec-cti override. Without that override it is not loaded,
+# so Grafana lists no datasource that answers nothing.
+# ==============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics
+    type: prometheus
+    uid: victoriametrics
+    access: proxy
+    url: http://victoria-metrics:8428

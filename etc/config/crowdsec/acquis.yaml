@@ -1,0 +1,21 @@
+# Traefik HTTP Access Log Acquisition
+filenames:
+  - /var/log/traefik/access.log
+labels:
+  type: traefik
+---
+# Host SSH & Linux System Authentication Logs (Debian/Ubuntu/RHEL/CentOS/Rocky/Fedora)
+filenames:
+  - /var/log/host/auth.log
+  - /var/log/host/secure
+  - /var/log/host/syslog
+  - /var/log/host/messages
+labels:
+  type: syslog
+---
+# Host iptables Firewall Kernel Log Acquisition
+filenames:
+  - /var/log/host/kern.log
+  - /var/log/host/syslog
+labels:
+  type: iptables

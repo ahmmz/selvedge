@@ -1,0 +1,16 @@
+# ==============================================================================
+# CrowdSec Host SSH & System Firewall Protection
+# Selvedge-Depends-On: crowdsec
+# Enable with:  make enable crowdsec-host
+# Disable with: make disable crowdsec-host
+# ==============================================================================
+
+services:
+  crowdsec:
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/appsec-generic-rules crowdsecurity/sshd crowdsecurity/linux crowdsecurity/linux-lpe crowdsecurity/iptables"
+    volumes:
+      - /var/log:/var/log/host:ro
+      - /run/systemd/journal:/run/systemd/journal:ro

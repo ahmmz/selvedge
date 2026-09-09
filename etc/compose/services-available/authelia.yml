@@ -1,0 +1,38 @@
+# ==============================================================================
+# Authelia Single Sign-On & Multi-Factor Authentication Add-On
+# Official Documentation: https://www.authelia.com/integration/proxies/traefik/
+# ==============================================================================
+# Enable with:  make enable authelia
+# Disable with: make disable authelia
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  authelia:
+    <<: *defaults
+    container_name: authelia
+    image: authelia/authelia:4.39.23
+    volumes:
+      - ./etc/config/authelia/configuration.yml:/config/configuration.yml:ro
+      - ./data/authelia:/var/lib/authelia
+    environment:
+      <<: *common
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET: ${AUTHELIA_JWT_SECRET:?Set AUTHELIA_JWT_SECRET in .env}
+      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET:?Set AUTHELIA_SESSION_SECRET in .env}
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_KEY:?Set AUTHELIA_STORAGE_KEY in .env}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`${AUTHELIA_HOST:-auth.selvedge.local}`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"

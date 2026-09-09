@@ -1,0 +1,16 @@
+# ==============================================================================
+# Grafana Dashboard Provisioning
+# Loads every dashboard JSON file from etc/config/grafana/dashboards/.
+# ==============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: Selvedge
+    type: file
+    updateIntervalSeconds: 30
+    # Allow edits in the UI. A file change still overwrites them.
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,24 @@
+# ==============================================================================
+# Prometheus Monitoring Scrape Configuration
+# ==============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Optional overrides drop their own job files here, so this file stays fixed.
+scrape_config_files:
+  - /etc/prometheus/scrape.d/*.yml
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "traefik"
+    static_configs:
+      - targets: ["traefik:7070"]
+
+  - job_name: "crowdsec"
+    static_configs:
+      - targets: ["crowdsec:6060"]

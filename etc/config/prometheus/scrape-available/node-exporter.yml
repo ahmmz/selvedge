@@ -1,0 +1,12 @@
+# ==============================================================================
+# Prometheus scrape job for node-exporter
+# ==============================================================================
+# The node-exporter override mounts this file into /etc/prometheus/scrape.d/,
+# where prometheus.yml picks it up through scrape_config_files. It has no effect
+# until you run: make enable node-exporter
+# ==============================================================================
+
+scrape_configs:
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]

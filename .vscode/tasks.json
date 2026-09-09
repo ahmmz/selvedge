@@ -1,0 +1,83 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Selvedge",
+      "type": "shell",
+      "icon": { "id": "run-all" },
+      "detail": "Start Selvedge",
+      "command": "make start",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "showReuseMessage": false,
+        "clear": true,
+        "panel": "new"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Stop Selvedge",
+      "type": "shell",
+      "icon": { "id": "stop-circle" },
+      "detail": "Stop Selvedge",
+      "command": "make stop",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "showReuseMessage": false,
+        "clear": true,
+        "panel": "new"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Restart Selvedge",
+      "type": "shell",
+      "icon": { "id": "repo-sync" },
+      "detail": "Restart Selvedge",
+      "command": "make restart",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "showReuseMessage": false,
+        "clear": true,
+        "panel": "new"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Update Selvedge",
+      "type": "shell",
+      "icon": { "id": "cloud-download" },
+      "detail": "Update Selvedge",
+      "command": "make update",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "showReuseMessage": false,
+        "clear": true,
+        "panel": "new"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    }
+  ]
+}

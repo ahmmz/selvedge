@@ -1,0 +1,24 @@
+name: CI validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install template tooling
+        run: sudo apt-get update && sudo apt-get install --yes gettext-base
+
+      - name: Validate Compose matrix
+        run: ./scripts/compose.sh validate

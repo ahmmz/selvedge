@@ -1,0 +1,19 @@
+[Unit]
+Description=Selvedge Edge Proxy
+Requires=docker.service network-online.target
+After=docker.service network-online.target
+Documentation=https://github.com/ahmmz/selvedge
+
+[Service]
+WorkingDirectory=${CURRENT_DIR}
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=5min
+
+ExecStartPre=-make stop
+ExecStart=make start
+
+ExecStop=make stop
+
+[Install]
+WantedBy=multi-user.target

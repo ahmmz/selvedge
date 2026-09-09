@@ -1,0 +1,23 @@
+# ==============================================================================
+# Traefik GeoBlock Middleware Configuration
+# ==============================================================================
+# Enable with:  make enable geoblock
+# Disable with: make disable geoblock
+#
+# Usage in labels:
+#   labels:
+#     - "traefik.http.routers.myapp.middlewares=geoblock@file"
+# ==============================================================================
+
+http:
+  middlewares:
+    geoblock:
+      plugin:
+        geoblock:
+          allowLocalXForwadedFor: true
+          allowUnknown: false
+          blackListMode: false
+          countries:
+            - EG
+            - US
+            - DE

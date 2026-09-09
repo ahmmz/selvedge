@@ -1,0 +1,21 @@
+# ==============================================================================
+# Rootless Dozzle Shared Socket Proxy Override
+# Requires: make enable rootless && make enable dozzle
+# Managed automatically when both dependencies are enabled.
+# Selvedge-Depends-On: rootless dozzle
+# Selvedge-Auto-Enable: true
+# ==============================================================================
+
+services:
+  dozzle:
+    networks:
+      - selvedge
+      - traefik-socket
+    depends_on:
+      traefik-socket-proxy:
+        condition: service_healthy
+    environment:
+      DOCKER_HOST: tcp://traefik-socket-proxy:2375
+    volumes:
+      # Replace the add-on's direct socket mount at the same container path.
+      - /dev/null:/var/run/docker.sock:ro

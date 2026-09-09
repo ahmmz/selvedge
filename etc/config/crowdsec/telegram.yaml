@@ -1,0 +1,26 @@
+# ==============================================================================
+# CrowdSec Telegram Notification Bot Configuration
+# ==============================================================================
+# HOW TO ENABLE TELEGRAM ALERTS:
+# 1. Set CROWDSEC_TELEGRAM_BOT_TOKEN and CROWDSEC_TELEGRAM_CHAT_ID in .env:
+#    CROWDSEC_TELEGRAM_BOT_TOKEN="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+#    CROWDSEC_TELEGRAM_CHAT_ID="-100123456789"
+#
+# 2. Add '- telegram_default' under notifications in data/crowdsec/config/profiles.yaml
+#
+# 3. Restart stack: make restart
+# ==============================================================================
+
+type: http
+name: telegram_default
+log_level: info
+url: https://api.telegram.org/bot${CROWDSEC_TELEGRAM_BOT_TOKEN}/sendMessage
+method: POST
+headers:
+  Content-Type: application/json
+format: |
+  {
+    "chat_id": "${CROWDSEC_TELEGRAM_CHAT_ID}",
+    "parse_mode": "HTML",
+    "text": "{{range $i, $alert := $}}{{range .Decisions}}🏴 <b>CrowdSec Alert</b>\n\nIP: <code>{{$alert.Source.IP}}</code>\nAction: <b>{{.Type}}</b> ({{.Duration}})\nScenario: <code>{{.Scenario}}</code> ({{$alert.EventsCount}} hits)\nServer: <b>{{if env "CROWDSEC_HOSTNAME"}}{{env "CROWDSEC_HOSTNAME"}}{{else if $alert.MachineID}}{{$alert.MachineID}}{{else}}Selvedge{{end}}</b>\nCountry: {{if $alert.Source.Cn}}{{$alert.Source.Cn | upper}}{{else}}🏴‍☠️ Unknown / VPN{{end}}\nASN: {{if $alert.Source.AsNumber}}<code>AS{{$alert.Source.AsNumber}}</code> ({{$alert.Source.AsName}}){{else}}N/A{{end}}\n\n<a href=\"https://app.crowdsec.net/cti/{{$alert.Source.IP}}\">CTI Reputation</a> | <a href=\"https://www.whois.com/whois/{{$alert.Source.IP}}\">WHOIS Lookup</a>{{end}}{{end}}"
+  }

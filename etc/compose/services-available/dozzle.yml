@@ -1,0 +1,36 @@
+# ==============================================================================
+# Dozzle Real-time Container Log Viewer Add-On
+# Official Documentation: https://dozzle.dev/
+# ==============================================================================
+# Enable with:  make enable dozzle
+# Disable with: make disable dozzle
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  dozzle:
+    <<: *defaults
+    container_name: dozzle
+    image: amir20/dozzle:v10.10.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      <<: *common
+      DOZZLE_LEVEL: info
+      DOZZLE_NO_ANALYTICS: "true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`${DOZZLE_HOST:-logs.selvedge.local}`)"
+      - "traefik.http.routers.dozzle.entrypoints=websecure"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"

@@ -1,0 +1,18 @@
+# ==============================================================================
+# Selvedge Traefik Access Log Rotation Template
+# Install on host OS with: sudo cp etc/templates/traefik.logrotate /etc/logrotate.d/traefik
+# ==============================================================================
+
+/opt/selvedge/data/log/traefik/*.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    sharedscripts
+    postrotate
+        docker exec traefik kill -USR1 1 2>/dev/null || true
+    endscript
+}

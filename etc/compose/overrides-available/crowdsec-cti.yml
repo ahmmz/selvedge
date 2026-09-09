@@ -1,0 +1,79 @@
+# ==============================================================================
+# CrowdSec Threat Intelligence Dashboard (VictoriaMetrics)
+# Selvedge-Depends-On: crowdsec monitoring
+# Dashboard: https://grafana.com/grafana/dashboards/21689
+# ==============================================================================
+# Enable with:  make enable crowdsec-cti
+# Disable with: make disable crowdsec-cti
+# ==============================================================================
+# Adds a world map of attacking IP addresses, plus country, ASN, and scenario
+# breakdowns with links to CrowdSec CTI, Shodan, and Censys.
+#
+# Prometheus scrapes CrowdSec engine counters. Those counters carry no attacking
+# IP country or coordinates, so a map cannot be built from them. This override runs
+# VictoriaMetrics beside Prometheus and has CrowdSec push each decision to it as
+# a labelled sample.
+#
+# QUICKSTART INSTRUCTIONS:
+# 1. Enable and start:
+#    make enable crowdsec-cti && make start
+#
+# 2. Add the handler to the remediation profile. Edit
+#    data/crowdsec/config/profiles.yaml and add under notifications:
+#      - http_victoriametrics
+#
+# 3. Restart, then create a test decision to confirm samples arrive:
+#    make restart
+#    docker exec crowdsec cscli decisions add --ip 192.0.2.10 --duration 10m
+#
+# The PARSERS variable below installs the geoip parser on start, so the country
+# and coordinate labels are present without a cscli command.
+#
+# ------------------------------------------------------------------------------
+# NOTES:
+# - Samples appear only when a decision fires. Detection alone writes nothing.
+#   An engine that never bans leaves this dashboard empty.
+# - VictoriaMetrics stores only these decision samples. Prometheus stays the
+#   datasource for Traefik and engine metrics.
+# - Data survives a restart in ./data/victoria-metrics.
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  victoria-metrics:
+    <<: *defaults
+    image: victoriametrics/victoria-metrics:v1.151.0
+    container_name: victoria-metrics
+    volumes:
+      - ./data/victoria-metrics:/storage
+    environment:
+      <<: *common
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+      - "--retentionPeriod=${VICTORIAMETRICS_RETENTION:-3}"
+
+  crowdsec:
+    environment:
+      # geoip-enrich adds the country and coordinate labels the map plots.
+      # The entrypoint installs anything listed here on start.
+      PARSERS: "crowdsecurity/geoip-enrich"
+    volumes:
+      - ./etc/config/crowdsec/victoriametrics.yaml:/etc/crowdsec/notifications/victoriametrics.yaml:ro
+
+  grafana:
+    volumes:
+      - ./etc/config/grafana/dashboards-available/crowdsec-cti.json:/var/lib/grafana/dashboards/crowdsec-cti.json:ro
+      - ./etc/config/grafana/datasources-available/victoriametrics.yml:/etc/grafana/provisioning/datasources/victoriametrics.yml:ro
+

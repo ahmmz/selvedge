@@ -1,0 +1,68 @@
+# ==============================================================================
+# Optional Traefik Socket Isolation Override
+# Official Documentation: https://github.com/wollomatic/socket-proxy
+# Enable with:  make enable rootless
+# Disable with: make disable rootless
+# ==============================================================================
+
+networks:
+  traefik-socket:
+    driver: bridge
+    internal: true
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  traefik-socket-proxy:
+    <<: *defaults
+    container_name: traefik-socket-proxy
+    image: wollomatic/socket-proxy:1.13.1
+    user: "65534:${DOCKER_GID:-65534}"
+    read_only: true
+    cap_drop:
+      - ALL
+    environment:
+      <<: *common
+    command:
+      - -loglevel=info
+      - -listenip=0.0.0.0
+      - -allowfrom=traefik,dozzle
+      - '-allowGET=/v1\..{1,2}/(version|info|containers/.*|events.*)'
+      - -allowGET=/_ping
+      - -allowHEAD=/_ping
+      - -allowhealthcheck
+      - -watchdoginterval=3600
+      - -stoponwatchdog
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-socket
+    healthcheck:
+      test: ["CMD", "./healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  traefik:
+    user: "${PUID:-1000}:${PGID:-1000}"
+    networks:
+      - selvedge
+      - traefik-socket
+    depends_on:
+      traefik-socket-proxy:
+        condition: service_healthy
+    environment:
+      TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: tcp://traefik-socket-proxy:2375
+    volumes:
+      # Replace the base socket mount at the same container path.
+      - /dev/null:/var/run/docker.sock:ro

@@ -1,0 +1,36 @@
+# ==============================================================================
+# CrowdSec VictoriaMetrics Notification Handler
+# ==============================================================================
+# Turns every CrowdSec decision into a metric sample so Grafana can plot attacks
+# by country, ASN, scenario, and coordinates. CrowdSec's own Prometheus endpoint
+# reports engine counters only and carries none of these labels.
+#
+# This file does nothing on its own. Enable the override that ships the
+# VictoriaMetrics container:
+#
+# 1. make enable crowdsec-cti
+# 2. Install the parser that adds country and coordinates to an alert:
+#    docker exec crowdsec cscli parsers install crowdsecurity/geoip-enrich
+# 3. Add '- http_victoriametrics' under notifications in
+#    data/crowdsec/config/profiles.yaml
+# 4. make restart
+#
+# Samples arrive only when a decision fires. An idle engine leaves the dashboard
+# empty. To produce a test sample, run:
+#   docker exec crowdsec cscli decisions add --ip 192.0.2.10 --duration 10m
+# ==============================================================================
+
+type: http
+name: http_victoriametrics
+log_level: info
+url: http://victoria-metrics:8428/api/v1/import
+method: POST
+headers:
+  Content-Type: application/json
+format: >
+  {{- range $Alert := . -}}
+  {{- $traefikRouters := GetMeta . "traefik_router_name" -}}
+  {{- range .Decisions -}}
+  {"metric":{"__name__":"cs_lapi_decision","instance":"{{if env "CROWDSEC_HOSTNAME"}}{{env "CROWDSEC_HOSTNAME"}}{{else}}Selvedge{{end}}","country":"{{$Alert.Source.Cn}}","asname":"{{$Alert.Source.AsName}}","asnumber":"{{$Alert.Source.AsNumber}}","latitude":"{{$Alert.Source.Latitude}}","longitude":"{{$Alert.Source.Longitude}}","iprange":"{{$Alert.Source.Range}}","scenario":"{{.Scenario}}","type":"{{.Type}}","duration":"{{.Duration}}","scope":"{{.Scope}}","ip":"{{.Value}}","traefik_routers":{{ printf "%q" ($traefikRouters | uniq | join ",")}}},"values": [1],"timestamps":[{{now|unixEpoch}}000]}
+  {{- end }}
+  {{- end -}}

@@ -1,0 +1,27 @@
+# ==============================================================================
+# Traefik Custom Error Pages Middleware Configuration
+# ==============================================================================
+# Enable with:  make enable error-pages
+# Disable with: make disable error-pages
+#
+# QUICKSTART INSTRUCTIONS:
+# Attach middleware `error-pages@file` to any HTTP router:
+#   labels:
+#     - "traefik.http.routers.myapp.middlewares=error-pages@file"
+#
+# Or include in default chain in etc/traefik/enabled/default.yml:
+#   default:
+#     chain:
+#       middlewares:
+#         - security-headers
+#         - error-pages
+# ==============================================================================
+
+http:
+  middlewares:
+    error-pages:
+      errors:
+        status:
+          - "400-599"
+        service: error-pages@docker
+        query: "/{status}.html"

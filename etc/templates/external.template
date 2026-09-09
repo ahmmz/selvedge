@@ -1,0 +1,17 @@
+http:
+  routers:
+    ${SERVICE_LOCASED}:
+      entryPoints:
+        - websecure
+      rule: "Host(`{{env "${SERVICE_UPCASED}_HOST" | default "${SERVICE_LOCASED}.local"}}`)"
+      middlewares:
+        - security-headers
+      tls: {}
+      service: ${SERVICE_LOCASED}
+
+  services:
+    ${SERVICE_LOCASED}:
+      loadBalancer:
+        servers:
+          - url: "https://{{env "${SERVICE_UPCASED}_ADDRESS"}}"
+        passHostHeader: true

@@ -1,0 +1,150 @@
+networks:
+  selvedge:
+    name: selvedge
+    driver: bridge
+    internal: false
+    driver_opts:
+      com.docker.network.bridge.name: "selvedge"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+
+services:
+  traefik:
+    image: traefik:v3.7.13
+    container_name: traefik
+    restart: ${RESTART_POLICY:-unless-stopped}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - selvedge
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./etc/traefik/enabled:/etc/traefik:ro
+      - ./etc/mkcert:/etc/mkcert:ro
+      - ./etc/letsencrypt:/etc/letsencrypt:rw
+      - ./data/log/traefik:/var/log/traefik:rw
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: ${TZ:-UTC}
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:-}
+      CROWDSEC_BOUNCER_API_KEY: ${CROWDSEC_BOUNCER_API_KEY:-}
+    healthcheck:
+      test: [ 'CMD', 'traefik', 'healthcheck', '--ping' ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    labels:
+      - "traefik.enable=true"
+
+    command:
+      # ------------------------------------------------------------------
+      # Core & API
+      # ------------------------------------------------------------------
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
+      - --api=true
+      - --api.insecure=false
+      - --ping=true
+      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+      - --serverstransport.insecureskipverify=${TRAEFIK_INSECURE_SKIP_VERIFY:-false}
+
+      # ------------------------------------------------------------------
+      # Access logs & metrics
+      # Grafana breaks totals down by route, so keep the three label options
+      # on. Set TRAEFIK_ACCESSLOG_FORMAT to json for the Loki add-on.
+      # ------------------------------------------------------------------
+      - --accesslog=${TRAEFIK_ACCESSLOG:-false}
+      - --accesslog.filepath=${TRAEFIK_ACCESSLOG_FILEPATH:-/var/log/traefik/access.log}
+      - --accesslog.format=${TRAEFIK_ACCESSLOG_FORMAT:-common}
+      - --metrics.prometheus=${TRAEFIK_METRICS_ENABLE:-false}
+      - --metrics.prometheus.entrypoint=metrics
+      - --metrics.addinternals=true
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addRoutersLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+
+      # ------------------------------------------------------------------
+      # Providers - https://docs.traefik.io/providers/docker/
+      # ------------------------------------------------------------------
+      - --providers.docker=true
+      - --providers.docker.network=selvedge
+      - --providers.docker.allowEmptyServices=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.file.watch=true
+      - --providers.file.directory=/etc/traefik
+
+      # ------------------------------------------------------------------
+      # Plugins
+      # ------------------------------------------------------------------
+      - --experimental.plugins.crowdsec.moduleName=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      - --experimental.plugins.crowdsec.version=v1.6.0
+      - --experimental.plugins.geoblock.moduleName=github.com/PascalMinder/geoblock
+      - --experimental.plugins.geoblock.version=v0.3.8
+
+      # ------------------------------------------------------------------
+      # Entry points - https://docs.traefik.io/routing/entrypoints/
+      # ------------------------------------------------------------------
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.metrics.address=:7070
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.asDefault=true
+      - --entrypoints.websecure.http.middlewares=default@file
+
+      # ------------------------------------------------------------------
+      # Entry point hardening
+      # aliasHeadersStrategy drops a header whose name aliases another, such
+      # as X_Auth_User against X-Auth-User. A PHP, CGI, or WSGI backend folds
+      # both spellings into one variable, so an alias can overwrite a header
+      # the proxy sets. Traefik warns for every entry point that leaves it
+      # unset, so all four carry it.
+      # encodedCharacters stays permissive, which is the Traefik default, so
+      # an upgrade breaks no application. Set TRAEFIK_ENCODED_CHARS to false
+      # to answer such a path with 400. The encoded slash has its own switch,
+      # because applications use it in a path segment far more often.
+      # ------------------------------------------------------------------
+      - --entrypoints.web.http.aliasHeadersStrategy=${TRAEFIK_ALIAS_HEADERS:-delete}
+      - --entrypoints.websecure.http.aliasHeadersStrategy=${TRAEFIK_ALIAS_HEADERS:-delete}
+      - --entrypoints.metrics.http.aliasHeadersStrategy=${TRAEFIK_ALIAS_HEADERS:-delete}
+      - --entrypoints.traefik.http.aliasHeadersStrategy=${TRAEFIK_ALIAS_HEADERS:-delete}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedBackSlash=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedHash=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedNullCharacter=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedPercent=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedQuestionMark=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedSemicolon=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.web.http.encodedCharacters.allowEncodedSlash=${TRAEFIK_ENCODED_SLASH:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedBackSlash=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedHash=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedNullCharacter=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedPercent=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedSemicolon=${TRAEFIK_ENCODED_CHARS:-true}
+      - --entrypoints.websecure.http.encodedCharacters.allowEncodedSlash=${TRAEFIK_ENCODED_SLASH:-true}
+
+      # ------------------------------------------------------------------
+      # Trusted proxies
+      # Traefik reads the client IP from X-Forwarded-For only when the peer is
+      # in this list. The default is the Cloudflare edge plus the private
+      # subnets. Set TRUSTED_IPS in .env to change it.
+      # ------------------------------------------------------------------
+      - --entrypoints.web.forwardedHeaders.trustedIPs=${TRUSTED_IPS:-173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32,127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      - --entrypoints.websecure.forwardedHeaders.trustedIPs=${TRUSTED_IPS:-173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32,127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+
+      # ------------------------------------------------------------------
+      # Let's Encrypt (ACME DNS-01)
+      # https://docs.traefik.io/https/acme/
+      # ------------------------------------------------------------------
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=${DNS_CHALLENGE_PROVIDER:-cloudflare}
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.propagation.delayBeforeChecks=${CF_RESOLVER_WAITTIME:-60}
+      - --certificatesresolvers.letsencrypt.acme.storage=/etc/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.caserver=${ACME_CASERVER:-https://acme-v02.api.letsencrypt.org/directory}

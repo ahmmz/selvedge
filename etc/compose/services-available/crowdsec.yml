@@ -1,0 +1,135 @@
+# ==============================================================================
+# CrowdSec Security Engine Service (Web App, Host SSH & Cloudflare Bouncer)
+# Official Documentation: https://docs.crowdsec.net/u/bouncers/cloudflare/
+# ==============================================================================
+# Enable with:  make enable crowdsec
+# Disable with: make disable crowdsec
+#
+# QUICKSTART INSTRUCTIONS:
+# 1. Enable & start stack:
+#    make enable crowdsec && make start
+#
+# 2. Generate bouncer API key for Traefik plugin:
+#    docker exec crowdsec cscli bouncers add traefik-bouncer
+#
+# 3. Save the generated key into your .env file:
+#    CROWDSEC_BOUNCER_API_KEY="<your-generated-key>"
+#
+# 4. Restart Selvedge:
+#    make restart
+#
+# 5. Protect any web service router by adding middleware label:
+#    labels:
+#      - "traefik.http.routers.myapp.middlewares=crowdsec@file"
+#
+# ------------------------------------------------------------------------------
+# HOW TO ENABLE HOST SSH PROTECTION (PORT 22):
+# ------------------------------------------------------------------------------
+# 1. Enable host override: make enable crowdsec-host
+# 2. Install CrowdSec firewall bouncer on host OS:
+#    curl -s https://install.crowdsec.net | sudo sh
+#    sudo apt install crowdsec-firewall-bouncer-iptables  # (Debian/Ubuntu)
+# 3. Register host bouncer key inside Docker:
+#    docker exec crowdsec cscli bouncers add host-firewall
+# 4. Save API key to /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml:
+#    api_url: http://127.0.0.1:8080/
+#    api_key: <generated-key>
+# 5. Restart host bouncer service: sudo systemctl restart crowdsec-firewall-bouncer
+#
+# ------------------------------------------------------------------------------
+# HOW TO ENABLE DISCORD ALERTS:
+# ------------------------------------------------------------------------------
+# 1. Set CROWDSEC_DISCORD_WEBHOOK="https://discord.com/api/webhooks/..." in your .env file
+# 2. Add '- discord_default' under notifications in data/crowdsec/config/profiles.yaml
+# 3. Restart stack: make restart
+#
+# ------------------------------------------------------------------------------
+# HOW TO ENABLE CLOUDFLARE WORKER BOUNCER (HTTPS LAPI METHOD):
+# Documentation: https://docs.crowdsec.net/u/bouncers/cloudflare/
+# ------------------------------------------------------------------------------
+# 1. Enable HTTPS LAPI override: make enable crowdsec-lapi
+# 2. Set CROWDSEC_LAPI_HOST="selapi.yourdomain.com" in your .env file
+# 3. Create Cloudflare API Token & deploy worker using CrowdSec Installer
+# 4. Generate Cloudflare bouncer API key inside CrowdSec container:
+#    docker exec crowdsec cscli bouncers add cloudflare-worker
+# 5. Apply changes: make restart
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  traefik:
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    volumes:
+      - ./data/log/traefik:/var/log/traefik
+    environment:
+      - TRAEFIK_ACCESSLOG=true
+      - TRAEFIK_ACCESSLOG_FILEPATH=/var/log/traefik/access.log
+      - TRAEFIK_ACCESSLOG_FORMAT=json
+
+  crowdsec:
+    <<: *defaults
+    container_name: crowdsec
+    hostname: ${CROWDSEC_HOSTNAME:-crowdsec-server}
+    image: crowdsecurity/crowdsec:v1.8.1
+    healthcheck:
+      test: ["CMD-SHELL", "cscli lapi status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      <<: *common
+      CROWDSEC_HOSTNAME: "${CROWDSEC_HOSTNAME:-Selvedge}"
+      DISCORD_WEBHOOK_URL: "${CROWDSEC_DISCORD_WEBHOOK:-}"
+      CROWDSEC_DISCORD_WEBHOOK: "${CROWDSEC_DISCORD_WEBHOOK:-}"
+      CROWDSEC_SLACK_WEBHOOK: "${CROWDSEC_SLACK_WEBHOOK:-}"
+      CROWDSEC_TELEGRAM_BOT_TOKEN: "${CROWDSEC_TELEGRAM_BOT_TOKEN:-}"
+      CROWDSEC_TELEGRAM_CHAT_ID: "${CROWDSEC_TELEGRAM_CHAT_ID:-}"
+      CROWDSEC_GEOAPIFY_KEY: "${CROWDSEC_GEOAPIFY_KEY:-}"
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/appsec-generic-rules"
+      PARSERS: "crowdsecurity/geoip-enrich"
+      #
+      # Extended Security Collections Guide:
+      # - crowdsecurity/sshd                (Requires `- /var/log:/var/log/host:ro` mount - parses auth.log / secure)
+      # - crowdsecurity/linux               (Requires `- /var/log:/var/log/host:ro` mount - parses syslog / messages)
+      # - crowdsecurity/linux-lpe           (Requires `- /var/log:/var/log/host:ro` mount - parses sudo / su escalation)
+      # - crowdsecurity/iptables            (Requires `- /var/log:/var/log/host:ro` mount - parses kern.log port scans)
+      # - crowdsecurity/appsec-crs          (No log mount required - OWASP Core Rule Set for AppSec WAF)
+      # - crowdsecurity/appsec-virtual-patching (No log mount required - Virtual patching for AppSec WAF)
+    volumes:
+      - ./etc/config/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - ./etc/config/crowdsec/acquis.d:/etc/crowdsec/acquis.d/custom:ro
+      - ./etc/config/crowdsec/scenarios:/etc/crowdsec/scenarios/custom:ro
+      - ./etc/config/crowdsec/whitelists:/etc/crowdsec/parsers/s02-enrich/custom:ro
+      - ./etc/config/crowdsec/discord.yaml:/etc/crowdsec/notifications/discord.yaml:ro
+      - ./etc/config/crowdsec/slack.yaml:/etc/crowdsec/notifications/slack.yaml:ro
+      - ./etc/config/crowdsec/telegram.yaml:/etc/crowdsec/notifications/telegram.yaml:ro
+      - ./data/crowdsec/config:/etc/crowdsec
+      - ./data/crowdsec/data:/var/lib/crowdsec/data
+      - ./data/log/traefik:/var/log/traefik:ro
+      # Host SSH Log Mount (Uncomment to enable SSH protection):
+      # - /var/log:/var/log/host:ro
+    # Host Bouncer LAPI Port (Uncomment to enable host firewall bouncers):
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+    labels:
+      - "traefik.enable=false"
+      # Expose LAPI securely over HTTPS for Cloudflare Workers (Uncomment below):
+      # - "traefik.enable=true"
+      # - "traefik.http.routers.crowdsec-lapi.rule=Host(`selapi.yourdomain.com`)"
+      # - "traefik.http.routers.crowdsec-lapi.entrypoints=websecure"
+      # - "traefik.http.services.crowdsec-lapi.loadbalancer.server.port=8080"
+      # - "traefik.http.routers.crowdsec-lapi.middlewares=whitelist-cloudflare@file"

@@ -1,0 +1,67 @@
+# ==============================================================================
+# Custom Error Pages Add-On (tarampampam/error-pages)
+# Official Guide: https://github.com/tarampampam/error-pages/blob/master/docs/guides/traefik_docker.md
+# ==============================================================================
+# Enable with:  make enable error-pages
+# Disable with: make disable error-pages
+#
+# QUICKSTART INSTRUCTIONS:
+# 1. Enable error pages add-on:
+#    make enable error-pages
+#
+# 2. Restart stack:
+#    make restart
+#
+# 3. Attach middleware `error-pages@file` or `error-pages@docker` to any service router:
+#    labels:
+#      - "traefik.http.routers.myapp.middlewares=error-pages@file"
+#
+# CONFIGURATION OPTIONS:
+# - ERROR_PAGES_TEMPLATE: built-in theme. One of app-down, cats, connection,
+#   ghost, hacker-terminal, l7, lost-in-space, noise, orient, shuffle, win98.
+# - ERROR_PAGES_SHOW_DETAILS: "true" / "false". Shows the request details and
+#   trace identifiers on the page. Keep it false on a public route.
+# - ERROR_PAGES_HTML_TEMPLATE: path to a custom template inside the container.
+#   Set it to /opt/html-template.html to use etc/templates/error-page.html.
+#   A custom template overrides the built-in theme.
+# ==============================================================================
+
+x-defaults: &defaults
+  restart: ${RESTART_POLICY:-unless-stopped}
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - selvedge
+
+x-common-env: &common
+  TZ: ${TZ:-UTC}
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+
+services:
+  error-pages:
+    <<: *defaults
+    container_name: error-pages
+    image: ghcr.io/tarampampam/error-pages:4.2.5
+    volumes:
+      - ./etc/templates/error-page.html:/opt/html-template.html:ro
+    environment:
+      <<: *common
+      TEMPLATE_NAME: ${ERROR_PAGES_TEMPLATE:-ghost}
+      SHOW_DETAILS: "${ERROR_PAGES_SHOW_DETAILS:-false}"
+      # Empty by default, so the built-in theme above applies. Set this to
+      # /opt/html-template.html to use the mounted custom template.
+      HTML_TEMPLATE: "${ERROR_PAGES_HTML_TEMPLATE:-}"
+    labels:
+      - "traefik.enable=true"
+      # Loadbalancer server port
+      - "traefik.http.services.error-pages.loadbalancer.server.port=8080"
+      # Errors middleware definition via Docker provider
+      - "traefik.http.middlewares.error-pages.errors.status=400-599"
+      - "traefik.http.middlewares.error-pages.errors.service=error-pages"
+      - "traefik.http.middlewares.error-pages.errors.query=/{status}.html"
+      # Catch-all router for unhandled domains/routes
+      - "traefik.http.routers.error-pages-catchall.rule=HostRegexp(`^.+$`)"
+      - "traefik.http.routers.error-pages-catchall.entrypoints=web,websecure"
+      - "traefik.http.routers.error-pages-catchall.service=error-pages"
+      - "traefik.http.routers.error-pages-catchall.priority=1"
