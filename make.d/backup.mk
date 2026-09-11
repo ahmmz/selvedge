@@ -1,45 +1,15 @@
-#########################################################
-## 
-## Backup and Restore Commands 
-##
-#########################################################
-
+# Stop the stack before backup or restore. Archives contain secrets.
 BACKUP_DIR ?= $(CURRENT_DIR)/backup
-TIMESTAMP := $(shell date +'%Y-%m-%d-%H%M%S')
-BACKUP_FILE := $(BACKUP_DIR)/$(PROJECT_LOCASED)-backup-$(TIMESTAMP).tar.gz
+# Leave empty to back up to a timestamped default name, or restore the newest completed archive.
+BACKUP_FILE ?=
+BACKUP_COMMAND = python3 "$(CURRENT_DIR)/scripts/backup.py" --root "$(CURRENT_DIR)" --directory "$(BACKUP_DIR)" --project "$(PROJECT_LOCASED)"
 
-.PHONY: backup
-backup: ## Create a compressed backup of environment, configuration, and data
-	@mkdir -p $(BACKUP_DIR)
-	@echo "$(GREEN)==>$(RESET) Creating full backup: $(YELLOW)$(notdir $(BACKUP_FILE))$(RESET) ..."
-	@tar -C $(CURRENT_DIR) \
-		--exclude='.git' \
-		--exclude='*.sock' \
-		--exclude='data/log/*' \
-		--exclude='*.pyc' \
-		-czf $(BACKUP_FILE) \
-		.env \
-		etc \
-		data \
-		$(if $(wildcard $(CURRENT_DIR)/docker-compose.override.yml),docker-compose.override.yml) 2>/dev/null || true
-	@echo "$(GREEN)==>$(RESET) Backup created successfully at: $(GREEN)$(BACKUP_FILE)$(RESET)"
+.PHONY: backup restore list-backups
+backup: ## Back up local config and all data to BACKUP_FILE, or a timestamped default (stop the stack first)
+	@$(BACKUP_COMMAND) backup $(if $(BACKUP_FILE),--file "$(BACKUP_FILE)")
 
-.PHONY: restore
-restore: ## Restore the latest configuration and data backup
-	@LATEST=$$(ls -t $(BACKUP_DIR)/$(PROJECT_LOCASED)-backup-*.tar.gz 2>/dev/null | head -n 1); \
-	if [ -z "$$LATEST" ] || [ ! -f "$$LATEST" ]; then \
-		echo "$(RED)==>$(RESET) No backup files found in $(BACKUP_DIR)"; \
-		exit 1; \
-	fi; \
-	echo "$(GREEN)==>$(RESET) Restoring from latest backup: $(YELLOW)$$(basename $$LATEST)$(RESET) ..."; \
-	tar -xvpzf "$$LATEST" -C $(CURRENT_DIR); \
-	echo "$(GREEN)==>$(RESET) Restore completed successfully."
+restore: ## Restore BACKUP_FILE, or the newest backup if unset (stop the stack first)
+	@$(BACKUP_COMMAND) restore $(if $(BACKUP_FILE),--file "$(BACKUP_FILE)")
 
-.PHONY: list-backups
-list-backups: ## List all available backups
-	@echo "$(GREEN)==>$(RESET) Available backups in $(YELLOW)$(BACKUP_DIR)$(RESET):"
-	@if [ -d "$(BACKUP_DIR)" ] && [ "$$(ls -A $(BACKUP_DIR)/*.tar.gz 2>/dev/null)" ]; then \
-		ls -lh $(BACKUP_DIR)/*.tar.gz | awk '{print "  - " $$9 " (" $$5 ", " $$6 " " $$7 " " $$8 ")";}'; \
-	else \
-		echo "  No backups found."; \
-	fi
+list-backups: ## List completed backups, newest first
+	@$(BACKUP_COMMAND) list

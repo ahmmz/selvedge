@@ -326,7 +326,8 @@ hidden. To validate every supported service and override combination, run:
 | `make validate` | Validate the active Compose configuration without printing it |
 | `make config-show` | Print the resolved configuration, which can contain secrets |
 | `make backup` | Archive `.env`, configuration, certificates, and persistent data |
-| `make restore` | Restore the newest Selvedge backup |
+| `make restore` | Restore `BACKUP_FILE`, or the newest backup if unset |
+| `make list-backups` | List completed backups, newest first |
 | `make report` | Show CrowdSec bouncer, alert, and decision metrics |
 
 

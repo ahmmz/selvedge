@@ -37,12 +37,11 @@ etc/letsencrypt/*
 
 ### Docker Bind Mounts & Backups ###
 **/data/
-**/backup/*.tar.gz
+**/backup/
 
 # Python bytecode cache
 __pycache__/
 *.pyc
 
 # Keep the negations last, so an ignored directory still keeps its placeholder.
-!**/.keep
 !**/.gitkeep
