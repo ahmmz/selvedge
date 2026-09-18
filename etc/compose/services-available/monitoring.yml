@@ -48,7 +48,7 @@ services:
   grafana:
     <<: *defaults
     container_name: grafana
-    image: grafana/grafana:13.2.1
+    image: grafana/grafana:13.2.2
     volumes:
       - ./data/grafana:/var/lib/grafana
       - ./etc/config/grafana/provisioning:/etc/grafana/provisioning:ro
