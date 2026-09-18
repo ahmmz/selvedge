@@ -22,7 +22,7 @@ services:
   dozzle:
     <<: *defaults
     container_name: dozzle
-    image: amir20/dozzle:v10.10.0
+    image: amir20/dozzle:v11.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
