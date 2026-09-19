@@ -53,7 +53,7 @@ x-common-env: &common
 services:
   victoria-metrics:
     <<: *defaults
-    image: victoriametrics/victoria-metrics:v1.151.0
+    image: victoriametrics/victoria-metrics:v1.152.0
     container_name: victoria-metrics
     volumes:
       - ./data/victoria-metrics:/storage
