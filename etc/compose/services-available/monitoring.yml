@@ -27,7 +27,7 @@ services:
   prometheus:
     <<: *defaults
     container_name: prometheus
-    image: prom/prometheus:v3.14.0
+    image: prom/prometheus:v3.15.0
     volumes:
       - ./etc/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./etc/config/prometheus/scrape.d:/etc/prometheus/scrape.d:ro
