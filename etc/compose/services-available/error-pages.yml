@@ -42,7 +42,7 @@ services:
   error-pages:
     <<: *defaults
     container_name: error-pages
-    image: ghcr.io/tarampampam/error-pages:4.2.6
+    image: ghcr.io/tarampampam/error-pages:4.2.7
     volumes:
       - ./etc/templates/error-page.html:/opt/html-template.html:ro
     environment:
