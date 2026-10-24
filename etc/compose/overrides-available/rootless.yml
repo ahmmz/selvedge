@@ -26,7 +26,7 @@ services:
   traefik-socket-proxy:
     <<: *defaults
     container_name: traefik-socket-proxy
-    image: wollomatic/socket-proxy:1.13.1
+    image: wollomatic/socket-proxy:1.13.2
     user: "65534:${DOCKER_GID:-65534}"
     read_only: true
     cap_drop:
