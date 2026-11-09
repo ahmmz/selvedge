@@ -83,7 +83,7 @@ services:
     <<: *defaults
     container_name: crowdsec
     hostname: ${CROWDSEC_HOSTNAME:-crowdsec-server}
-    image: crowdsecurity/crowdsec:v1.8.1
+    image: crowdsecurity/crowdsec:v1.8.2
     healthcheck:
       test: ["CMD-SHELL", "cscli lapi status || exit 1"]
       interval: 10s
