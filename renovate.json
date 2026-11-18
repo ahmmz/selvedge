@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
   "enabledManagers": ["docker-compose", "github-actions"],
   "docker-compose": {
     "managerFilePatterns": [
@@ -8,6 +8,5 @@
     ]
   },
   "labels": ["dependencies", "docker"],
-  "automerge": false,
-  "dependencyDashboard": false
+  "automerge": true
 }

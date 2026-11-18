@@ -1,5 +1,21 @@
 # Selvedge
 
+<div align="center">
+
+![Selvedge](docs/assets/banner.png)
+
+[![CI Validate](https://github.com/ahmmz/selvedge/actions/workflows/ci-validate.yml/badge.svg)](https://github.com/ahmmz/selvedge/actions/workflows/ci-validate.yml)
+[![CI Security](https://github.com/ahmmz/selvedge/actions/workflows/ci-security.yml/badge.svg)](https://github.com/ahmmz/selvedge/actions/workflows/ci-security.yml)
+[![Renovate](https://img.shields.io/badge/Renovate-enabled-1A1F6C?logo=renovate&logoColor=white)](renovate.json)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+[![Traefik](https://img.shields.io/badge/Traefik-v3-24A1C1?logo=traefikproxy&logoColor=white)](docker-compose.yml)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2.24.4%2B-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+[![CrowdSec](https://img.shields.io/badge/CrowdSec-ready-6853DC?logo=crowdsec&logoColor=white)](docs/crowdsec.md)
+[![Authelia](https://img.shields.io/badge/Authelia-ready-1976D2?logo=authelia&logoColor=white)](etc/compose/services-available/authelia.yml)
+
+</div>
+
 Selvedge is a shared Traefik edge stack for independent Docker Compose
 projects. It creates an external Docker network named `selvedge`. Other stacks
 join that network and publish services through Traefik labels.
