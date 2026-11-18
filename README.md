@@ -1,5 +1,3 @@
-# Selvedge
-
 <div align="center">
 
 ![Selvedge](docs/assets/banner.png)
