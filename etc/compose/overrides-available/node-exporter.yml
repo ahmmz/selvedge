@@ -43,7 +43,7 @@ x-common-env: &common
 services:
   node-exporter:
     <<: *defaults
-    image: prom/node-exporter:v1.12.1
+    image: prom/node-exporter:v1.13.1
     container_name: node-exporter
     pid: host
     environment:
